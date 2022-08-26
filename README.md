@@ -381,4 +381,17 @@ for patient_id in patient_ids:
 
 Một số trang chiếu có diện tích nhỏ được che bởi mặt nạ, chẳng hạn như với bệnh nhân 10288 , mặc dù một số có diện tích khá lớn, chẳng hạn như bệnh nhân 10308 . Hãy xem liệu chúng ta có thể đào tạo một bộ phân loại để tìm ra lý do tại sao một số bản vá lỗi IDC tích cực và bản vá lỗi nào không.
 
+## V. Quy trình làm việc của Học máy
+`Đang cập nhật...`
+## 1. Tiền xử lý dữ liệu
+## 2. Vấn đề mất cân bằng giữa 2 lớp
+## 3. Huấn luyện mô hình - CNN từ đầu
+## 4. Huấn luyện mô hình - EfficientNetB0
+## 5. Huấn luyện mô hình - VGG16
+## 6. Huấn luyện mô hình - ResNet50
+## 7. Huấn luyện mô hình - Xception
+## 8. Điều chỉnh siêu tham số
+## 9. Các mô hình hiệu quả khác
+## 10. Huấn luyện mô hình đã chọn trên tất cả dữ liệu
+
 
