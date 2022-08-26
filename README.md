@@ -393,5 +393,6 @@ Một số trang chiếu có diện tích nhỏ được che bởi mặt nạ, c
 ## 8. Điều chỉnh siêu tham số
 ## 9. Các mô hình hiệu quả khác
 ## 10. Huấn luyện mô hình đã chọn trên tất cả dữ liệu
-## V. Kết luận
+## VI. Kết luận
 
+`Đang cập nhật...`
