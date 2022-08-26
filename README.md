@@ -28,6 +28,6 @@ Tôi sẽ bắt đầu bằng cách thực hiện tìm hiểu và làm quen vớ
 ## 3. Học máy trong y học
 Học máy ngày càng được ứng dụng nhiều hơn trong y học và đang giúp cứu sống nhiều người khỏi nhiều tình trạng bệnh lý khác nhau. Ứng dụng của Học máy trong Y học là rất lớn và là một chủ đề cực kỳ phức tạp, nhưng một số lĩnh vực chính bao gồm:
 
-Y học chính xác (Điều chỉnh thuốc cho bệnh nhân)
-Chẩn đoán hình ảnh y tế (Chẩn đoán điều kiện dựa trên hình ảnh, v.v.)
-Khám phá thuốc (Tạo ra các cấu trúc như protein hoặc các phân tử giống thuốc, dự đoán hoạt tính sinh học, v.v.)
+- Y học chính xác (Điều chỉnh thuốc cho bệnh nhân)
+- Chẩn đoán hình ảnh y tế (Chẩn đoán điều kiện dựa trên hình ảnh, v.v.)
+- Khám phá thuốc (Tạo ra các cấu trúc như protein hoặc các phân tử giống thuốc, dự đoán hoạt tính sinh học, v.v.)
