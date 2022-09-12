@@ -13,7 +13,7 @@ Phân loại mô bệnh học dựa trên các mẫu mô và sự xuất hiện 
 ## II. Tổng quan
 Trong dự án này, tôi muốn viết về ứng dụng phân loại của Deep learning (DL) ở cấp độ nghiên cứu!
 
-Với tư cách là một kỹ sư máy tính trẻ - tôi đang khám phá triển vọng áp dụng của sự các thuật toán Machine learning (ML) cho các lĩnh vực khác nhau và trích xuất đặc trưng từ dữ liệu. Chẩn đoán ung thư sớm, chính xác và nhanh chóng giúp cải thiện xác suất sống sót, và chẩn đoán ung thư vú sớm có thể cứu sống tới 400.000 người mỗi năm. Các mô hình Học máy có thể được triển khai trên toàn cầu hoặc mỗi địa phương và có thể xử lý lượng lớn dữ liệu trong một phần nhỏ thời gian mà con người cần.
+Với tư cách là một kỹ sư máy tính trẻ - tôi đang khám phá triển vọng của sự ứng dụng các thuật toán Machine learning (ML) cho các lĩnh vực khác nhau và trích xuất đặc trưng từ dữ liệu. Chẩn đoán ung thư sớm, chính xác và nhanh chóng giúp cải thiện xác suất sống sót, và chẩn đoán ung thư vú sớm có thể cứu sống tới 400.000 người mỗi năm. Các mô hình Học máy có thể được triển khai trên toàn cầu hoặc mỗi địa phương và có thể xử lý lượng lớn dữ liệu trong một phần nhỏ thời gian mà con người cần.
 
 Ung thư biểu mô tuyến xâm lấn (IDC) là loại phụ phổ biến nhất của tất cả các loại ung thư vú. Ung thư vú là dạng ung thư phổ biến nhất ở phụ nữ. Xác định và phân loại chính xác các loại ung thư vú là một nhiệm vụ lâm sàng quan trọng và các phương pháp tự động có thể được sử dụng để tiết kiệm thời gian và giảm thiểu sai sót.
 
