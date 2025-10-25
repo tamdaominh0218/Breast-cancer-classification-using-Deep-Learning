@@ -458,7 +458,7 @@ If I were to use Keras' ImageDataGenerator class here - it could treat each pati
 I should instead be having a 1 and 0 directory, with images of IDC(+) and IDC(-) respectively. Additionally, it helps to have a /train and /test directory to create a test set generator from a totally separate dataset. Let's write a script that creates a truncated dataset, and reformats the directories to the format Keras would love to work with.
 
 ****
-Note: We're creating a truncated dataset to test out the models on smaller sets for efficiency's sake. You're free to use the entirety of the dataset, but be prepared to wait a long time before you can benchmark them. Once the benchmarking is done on smaller datasets, I can load in the entirety of the images.
+_Note: We're creating a truncated dataset to test out the models on smaller sets for efficiency's sake. You're free to use the entirety of the dataset, but be prepared to wait a long time before you can benchmark them. Once the benchmarking is done on smaller datasets, I can load in the entirety of the images._
 ****
 ```
 if not os.path.exists('./hist_images_truncated/'):
@@ -560,7 +560,7 @@ Found 12908 images belonging to 2 classes.
 Found 18476 images belonging to 2 classes.
 ```
 ****
-Note: You'll want to set shuffle to False for the test_generator if you aim to plot confusion matrices for the predictions. If not, the labels can get mixed up and your confusion matrices will look horrible while your models may perform much better than it appears. There's no need to set shuffle to False for the train_generator and valid_generator.
+_Note: You'll want to set shuffle to False for the test_generator if you aim to plot confusion matrices for the predictions. If not, the labels can get mixed up and your confusion matrices will look horrible while your models may perform much better than it appears. There's no need to set shuffle to False for the train_generator and valid_generator._
 ****
 ## 2. Class Imbalance - Issue or Not?
 Here, we run into the potential issue of class imbalance. There's an imbalance between the number of IDC(+) and IDC(-) samples. Most Machine Learning algorithms perform best when there's a roughly equal number of samples, and this stands especially for binary classification such as we're trying to do.
@@ -572,6 +572,22 @@ Given the fact that negative samples are much more numerous than positive ones -
 ____
 _If our model misclassifies every single positive (class 1) sample, it'll still get 71% in accuracy, if it gets the other classifications right. In other words, if it outputs a constant 0 for every input, it'll still get 71% accuracy._
 ____
+That obviously defeats the purpose of the classifier. Intuitively, we'll want to get rid of this imbalance, but let's also explore some other implications of altering the balance of the classes.
+
+- What is the "real" distribution of classes?
+
+- What makes the difference between classes?
+
+- What makes the network predict wrong?
+
+These are crucial questions to ask, and depend on the dataset you're working with. Based on the answers, trying to fix class imbalance will either make or break your model, and sometimes you just have to live with the imbalance.
+
+Let's answer these questions for our own dataset first:
+____
+_"What is the real distribution of classes"_
+____
+![My picture](Images\breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-2_3_1.png)
+
 ## 3. Huấn luyện mô hình - CNN từ đầu
 ## 4. Huấn luyện mô hình - EfficientNetB0
 ## 5. Huấn luyện mô hình - VGG16
