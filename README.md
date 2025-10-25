@@ -586,7 +586,7 @@ Let's answer these questions for our own dataset first:
 ____
 _"What is the real distribution of classes"_
 ____
-![My picture](Images\breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-2_3_1.png)
+![image](Images/breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-2_3_1.png)
 
 ## 3. Huấn luyện mô hình - CNN từ đầu
 ## 4. Huấn luyện mô hình - EfficientNetB0
