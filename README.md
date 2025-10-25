@@ -41,7 +41,7 @@ Theo một nghĩa nào đó, các nhà nghiên cứu bệnh học đang thực h
 
 ![image](https://user-images.githubusercontent.com/110167646/186890301-86af4711-83e5-45fb-b861-cb0b4be595ab.png)
 
-## 2. Phần thưởng cho việc giải quyết vấn đề
+## 2. Lợi ích cho việc giải quyết vấn đề
 Chẩn đoán nhanh, chính xác và sớm cải thiện xác suất sống sót. Các mô hình Học máy có thể được triển khai trên toàn cầu hoặc cục bộ và có thể xử lý lượng lớn dữ liệu trong một phần nhỏ thời gian mà con người cần. Trên nhiều trường hợp khác nhau - người ta đã chứng minh rằng các mô hình Học máy, khi được huấn luyện đúng cách, có thể phân biệt các đặc trưng tốt hơn con người và có thể thực hiện phân loại hình ảnh ở mức độ chính xác cao hơn, ngay cả khi không có nhiều ngữ cảnh hoặc độ phân giải hình ảnh thấp.
 
 Theo Cleveland Clinic :
@@ -356,7 +356,7 @@ for patient_id in patient_ids:
         # Get image and label
         image = cv2.imread(df['path'][i])
         # Image shape might not be 50x50, in which case, it's a broken patch
-        # and we don't want to load it in
+        # and I don't want to load it in
         if(image.shape==(50, 50, 3)):
             idc_class = df['idc_class'][i]
             x_coord = df['x_coord'][i]
@@ -381,9 +381,184 @@ for patient_id in patient_ids:
 
 Một số trang chiếu có diện tích nhỏ được che bởi mặt nạ, chẳng hạn như với bệnh nhân 10288 , mặc dù một số có diện tích khá lớn, chẳng hạn như bệnh nhân 10308 . Hãy xem liệu chúng ta có thể đào tạo một bộ phân loại để tìm ra lý do tại sao một số bản vá lỗi IDC tích cực và bản vá lỗi nào không.
 
-## V. Quy trình làm việc của Học máy
-`Đang cập nhật...`
-## 1. Tiền xử lý dữ liệu
+## V. Machine Learning Workflow
+We've done Exploratory Data Analysis and got familiar with the dataset we're working with. Now - it's time to hop into the standard Machine Learning Workflow, starting with preprocessing data.
+## 1. Data Preprocessing
+We've worked with DataFrames so far, though, this was all without images - I only stored their paths in case I want to retrieve and plot them. One way to load images is to simply iterate through the data and load them in:
+```
+import cv2
+
+x = []
+y = []
+
+# Loading in 1000 images
+for i in data[:1000]:
+    if i.endswith('.png'):
+        label=i[-5]
+        img = cv2.imread(i)
+        # Transformation steps, such as resizing
+        img = cv2.resize(img,(200,200))
+        x.append(img)
+        y.append(label)
+```
+x and y are Python lists - which are very efficient at appending data at the cost of higher memory usage. Let's convert them to NumPy arrays, split them into a training and testing set, and call the garbage collection module to clear x and y from memory since I won't be using them anymore:
+```
+# Reduce from float32 for memory footprint
+x = np.array(x, dtype='float16')
+y = np.array(y, dtype='float16')
+
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test=train_test_split(x,y, shuffle=True, test_size=0.3)
+
+import gc
+x = None
+y = None
+gc.collect()
+```
+```
+x_train.shape
+# (700, 200, 200, 3)
+```
+This is the general process for converting images to NumPy arrays, but there's an issue here. I have 277k images. For images of size 50x50 - this could probably fit into a home system with 256GB of RAM into memory, but even though it can, it's just plain inefficient. There's no need to strain a machine with all of the images being loaded into memory at once, and 50x50 images are fairly small, making it harder to extract meaningful feature maps from them.
+
+On a more home-like machine, with 32-64GB of RAM, you could fit up to 25k images of 100x100 size, of 10k of 200x200 into memory, yet this is inefficient as well.
+
+This is where ImageDataGenerator comes in! I can stream data directly from our disk, loading batches into the memory and seamlessly providing the next batch during training (optionally, applying transformations to achieve data augmentation) instead. This can scale down to machines with as little as a single gigabyte of memory, if need be!
+
+****
+The issue is - ImageDataGenerator assumes a folder structure, that I don't have.
+****
+Our data is formatted as:
+```
+patient_1
+ - class0.png
+ - class1.png
+ - class1.png
+ - class0.png
+patient_2
+ - class0.png
+ - class1.png
+ - class1.png
+ - class0.png
+...
+```
+While Keras expects:
+```
+class_1
+ - sample0.png
+ - sample1.png
+ - sample2.png
+class_0
+ - sample0.png
+ - sample1.png
+ - sample2.png
+```
+If I were to use Keras' ImageDataGenerator class here - it could treat each patient as a class, and assume that we're trying to classify the patient based on the images within the directories.
+
+I should instead be having a 1 and 0 directory, with images of IDC(+) and IDC(-) respectively. Additionally, it helps to have a /train and /test directory to create a test set generator from a totally separate dataset. Let's write a script that creates a truncated dataset, and reformats the directories to the format Keras would love to work with.
+
+NOTE: We're creating a truncated dataset to test out the models on smaller sets for efficiency's sake. You're free to use the entirety of the dataset, but be prepared to wait a long time before you can benchmark them. Once the benchmarking is done on smaller datasets, I can load in the entirety of the images.
+
+```
+if not os.path.exists('./hist_images_truncated/'):
+    os.mkdir('./hist_images_truncated/')
+
+    os.mkdir('./hist_images_truncated/train/')
+    os.mkdir('./hist_images_truncated/test/')
+
+    os.mkdir('./hist_images_truncated/train/0/')
+    os.mkdir('./hist_images_truncated/train/1/')
+    os.mkdir('./hist_images_truncated/test/0/')
+    os.mkdir('./hist_images_truncated/test/1/')
+```
+Now, let's iterate over the length of the dataset, in large steps, and use the steps as the starting and ending indices for our data list, loading the associated images in, reshaping them, and saving them in the appropriate folder:
+```
+# enumerate() to get `batch_num`, starting at 1
+# range() starting at 1000 and incrementing in steps of 1000 towards the fifth of the length of the dataset
+for batch_num, indices in enumerate(range(1000, int(len(data)/5), 1000), 1):
+    x = []
+    y = []
+    
+    # Load in `indices-1000` to `indices`
+    # 0:1000, 1000:2000, 2000:3000, etc.
+    for i in data[indices-1000:indices]:
+        if i.endswith('.png'):
+            label=i[-5]
+            img = cv2.imread(i)
+            img = cv2.resize(img,(200,200))
+            x.append(img)
+            y.append(label)
+        
+    # Create NumPy Arrays from Python lists
+    x = np.array(x, dtype='float16')
+    y = np.array(y, dtype='float16')
+    
+    print(f'Processing batch {batch_num}, with images from {indices-1000} to {indices}')
+    
+    # Perform train-test split
+    from sklearn.model_selection import train_test_split
+    x_train, x_test, y_train, y_test = train_test_split(x,y, shuffle=True, test_size=0.3)
+    
+    # For each image in `x_train` - save it, including the associated batch_number and sample in the appropriate directory
+    for index, img in enumerate(x_train):
+        idc_class = y_train[index]
+        cv2.imwrite(f"./hist_images_truncated/train/{int(idc_class)}/batch_{batch_num}sample_{index}.png", img.astype('int'))
+    
+    # For each image in `x_test` - save it, including the associated batch_number and sample in the appropriate directory
+    for index, img in enumerate(x_test):
+        idc_class = y_test[index]
+        cv2.imwrite(f"./hist_images_truncated/test/{int(idc_class)}/batch_{batch_num}sample_{index}.png", img.astype('int'))
+```
+The test size is 30%, and we'll additionally take out a validation set from the training data. These are pretty decent sizes - and about half of the data will be used for testing and validation. There's no need to worry, there's still a bunch of data to learn from, but if I make the test and validation sets small - there's a change we'll delude ourselves as to how performant the model really is. Larger sets will help us more accurately assess whether it's really learned or not.
+
+We've resized the images to 200x200, since 50x50 is really small, and it'd be hard to extract much from there. Most models work great with 224x224 inputs, for historical and optimization reasons, but they won't suffer from being fed 200x200 images, especially if the models themselves have preprocessing steps taken care of in the architecture itself.
+
+The step size of 1000 is arbitrary. It can be as low as 1 or as high as 50000. Running this shouldn't take too long, and maps all of the images in the original directories onto a new format, with processed images (resized to 200x200):
+```
+Processing batch 1, with images from 0 to 1000
+Processing batch 2, with images from 1000 to 2000
+...
+Processing batch 54, with images from 53000 to 54000
+Processing batch 55, with images from 54000 to 55000
+```
+Now, I can flow the data from a directory, creating a generator for a training and testing dataset, splitting out the validation generator from the training data:
+```
+from keras.preprocessing.image import ImageDataGenerator
+
+train_datagen = ImageDataGenerator(
+        rotation_range=20,
+        zoom_range=0.15,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        shear_range=0.15,
+        horizontal_flip=True,
+        fill_mode="nearest",
+        validation_split=0.3)
+
+test_datagen = ImageDataGenerator()
+
+train_generator = train_datagen.flow_from_directory('./hist_images_truncated/train/', 
+                                                    batch_size=16, subset="training", 
+                                                    class_mode='binary', 
+                                                    target_size=(200, 200))
+valid_generator = train_datagen.flow_from_directory('./hist_images_truncated/train/', 
+                                                    batch_size=16, subset="validation", 
+                                                    class_mode='binary', 
+                                                    target_size=(200, 200))
+test_generator = test_datagen.flow_from_directory('./hist_images_truncated/test/', 
+                                                  batch_size=16, 
+                                                  class_mode='binary',
+                                                  # Read note below 
+                                                  shuffle=False,
+                                                  target_size=(200, 200))
+```
+This results in:
+```
+Found 30122 images belonging to 2 classes.
+Found 12908 images belonging to 2 classes.
+Found 18476 images belonging to 2 classes.
+```
+NODE: You'll want to set shuffle to False for the test_generator if you aim to plot confusion matrices for the predictions. If not, the labels can get mixed up and your confusion matrices will look horrible while your models may perform much better than it appears. There's no need to set shuffle to False for the train_generator and valid_generator.
 ## 2. Vấn đề mất cân bằng giữa 2 lớp
 ## 3. Huấn luyện mô hình - CNN từ đầu
 ## 4. Huấn luyện mô hình - EfficientNetB0
