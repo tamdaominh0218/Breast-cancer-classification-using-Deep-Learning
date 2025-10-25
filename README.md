@@ -562,7 +562,7 @@ Found 18476 images belonging to 2 classes.
 ****
 _Note: You'll want to set shuffle to False for the test_generator if you aim to plot confusion matrices for the predictions. If not, the labels can get mixed up and your confusion matrices will look horrible while your models may perform much better than it appears. There's no need to set shuffle to False for the train_generator and valid_generator._
 ****
-## 2. Class Imbalance - Issue or Not?
+## Class Imbalance - Issue or Not?
 Here, we run into the potential issue of class imbalance. There's an imbalance between the number of IDC(+) and IDC(-) samples. Most Machine Learning algorithms perform best when there's a roughly equal number of samples, and this stands especially for binary classification such as we're trying to do.
 
 It's worth noting that it's ideal for this balance between classes to exist naturally.
@@ -588,6 +588,183 @@ _"What is the real distribution of classes"_
 ____
 ![image](Images/breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-2_3_1.png)
 
+If we have a garden, with an equal amount of daisies and violets - it's natural to train a classifier to pay equal attention to them, through a binary classification learning algorithm. If violets are really rare - sure, each sample will have a few violets, just like each sample might have a few daisies - but a model may completely ignore violets knowing full well it'll get a 99% accuracy by classifying everything as daisies! From that perspective, violets are outliers, and outliers don't make for great generalization ability changers.
+
+In other words - what proportion of tissue shows markers for IDC? Well, as we've seen in the EDA section - not a lot. The proportion of IDC(+) to IDC(-) is low, so having more class 0 samples is natural for the network to train on. If we were to force that proportion to reach 1:1 - we'd be training the network to become super sensitive and misfire sensitively on one of the sides.
+
+This is, in fact, the exact thing we'd see if we were to force a 50/50 split between the classes on this specific model and dataset. Here's a count plot of the classes of the output and the count plot of the classes in the test_set the outputs tried predicting for, when the dataset was altered by SMOTE:
+![image](Images/breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-4.png)
+
+The network almost always goes for 1, even though the training data was enhanced to have a 50/50 split of classes, because it was deluded as to which classes are really present. The natural proportion of class 1 and class 0 isn't 50/50, and by forcing the proportion, we hurt the model. If it were conceivable that both classes can be naturally equally present - this would be much less likely to occur.
+
+It's worth noting that the model appeared to be great during training and during the validation phase on each epoch:
+
+```
+Epoch 1/25
+14893/14893 [==============================] - 3094s 208ms/step - loss: 0.1985 - f1: 0.9142 - binary_accuracy: 0.9195 - precision: 0.9221 - recall: 0.9164 - auc: 0.9756 - val_loss: 0.2781 - val_f1: 0.7862 - val_binary_accuracy: 0.8813 - val_precision: 0.7554 - val_recall: 0.8657 - val_auc: 0.9478 - lr: 0.0010
+Epoch 2/25
+14893/14893 [==============================] - 3062s 206ms/step - loss: 0.1897 - f1: 0.9182 - binary_accuracy: 0.9232 - precision: 0.9261 - recall: 0.9196 - auc: 0.9776 - val_loss: 0.2518 - val_f1: 0.7768 - val_binary_accuracy: 0.8954 - val_precision: 0.8703 - val_recall: 0.7455 - val_auc: 0.9524 - lr: 0.0010
+...
+```
+Though, this all quickly falls into the water once you evaluate the model on a test set:
+```
+3438/3438 [==============================] - 114s 33ms/step - loss: 2.4594 - f1: 0.4414 - binary_accuracy: 0.3170 - precision: 0.2932 - recall: 0.9997 - auc: 0.8988
+...
+```
+### In our tests - trying to fix the class imbalance hurt the model.
+___
+_"What makes the difference between classes?"_
+___
+![image](Images/breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-2_3_2.png)
+
+What makes the difference between IDC(-) and IDC(+)? Well, I don't know. I'm not a pathologist. Though, to the untrained eye, which the network also is - there doesn't seem to be much of a difference. It's the subtle cues and hints that seem to make the difference between the classes. Any method of equalizing the class imbalance that creates synthetic data for one of the classes will typically alter the new inputs to prevent major overfitting on the duplicate entries.
+
+If subtle cues are what makes the difference between IDC(-) and IDC(+) - most synthetic generation resamplers will end up totally wrecking the network's knowledge of what's going on. On the other hand, if we were classifying a "dogs vs cats" classifier and had a class imbalance - slightly altering the dog images won't change a dog to a cat!
+
+In the illustration above - the length of the cat's ears doesn't change it into a dog, nor does shortening the dog's snout change it into a cat. However, if (for the sake of argument), something like a darker patch of tissue could be a signifier for IDC - what happens if an IDC(-) sample gets a random darker patch due to a random synthetic augmentation process?
+
+This was a conceptual example - synthetic augmentation processes don't exactly work like this. They're much more prone to introducing random noise, and pooling, instead of coherently making ears or snouts shorter. However - on grainy, 50x50 images, changing a few pixels around can have dramatic effect. Whatever we do with the data - we don't want to alter it. Rotating images, moving them around, etc. should be fine!
+
+____
+_"What makes the network predict wrong?"_
+____
+This question is tied to the previous one. What makes the network predict wrong is the inability to discern between the classes. If this inability stems from the fact that the classes are very similar, then increasing the number of one class can also amplify the number of images that teach the network to predict wrongly. If this inability stems from the fact that the classes are very different, and the network can't discern between them - it's probably a case of a lack of entropic capacity.
+___
+_All of that is to say - we're likely to hurt the generalization abilities of our model, on this dataset, if we try fixing the class imbalance._
+___
+### Here, we make an educated guess and won't try fixing the imbalance, as it's more likely to hurt us than to help us.
+
+## How to Balance Imbalanced Sets?
+While we're already at the topic of class imbalance and fixing it - let's at least take a moment to appreciate how it is done, when it should be done. Note that none of the code in this section will make it to the final model's inputs and that this is a purely hypothetical scenario for cases in which you might want to perform balancing.
+
+Since we've been using Scikit-Learn so far - let's continue. Unfortunately, Scikit-Learn doesn't have any built-in methods or modules for balancing imbalanced datasets. However, third-party solutions do exist, and they play well with Scikit-Learn!
+
+We'll be using the imblearn (Imbalanced Learn) module, which offers a wide variety of re-sampling techniques to battle strong imbalance.
+
+In general, when you have strong imbalance - you can either:
+- Ignore it (if fixing would cause more issues, such as our case)
+
+- Undersample the strong class (in our case, undersampling the IDC(-) samples)
+
+- Oversample the weak class (in our case, oversampling the IDC(+) samples)
+
+- Combine undersampling and oversampling (undersample IDC(-) and oversample IDC(+))
+
+- Ensemble balanced sets
+
+Commonly, you won't have enough samples in both classes, so undersampling might pose an issue since the more numerous set is being trimmed down to the less numerous set. In those cases, you'll prefer to either combine undersampling and oversampling, or straight up oversample the weaker class.
+
+Undersampling can be as easy as slicing off a part of the dataset, using the slice notation of NumPy arrays (though, this would require you to have an array either sorted, or different arrays for your classes):
+
+```
+strong_class = strong_class[:x]
+```
+There are much more sophisticated methods of achieving undersampling, and it's worth taking a look at the imblearn module's GitHub page for those.
+
+****
+_Note: Like most of Scikit-Learn's fit_() methods, imblearn's methods also take in 2D arrays. For instance, our x_train is a 4D array - (length, 200, 200, 3). If we wanted to balance it, we'd have to reshape it back to a 2D array, fit it with the samplers, and then shape it back._
+****
+
+```
+# Calculate desired shape
+X_train_shape = x_train.shape[1] * x_train.shape[2] * x_train.shape[3]
+# Flatten X into a 2D array
+X_flattened = x_train.reshape(x_train.shape[0], X_train_shape)
+```
+
+Once we're done resampling - we'll reshape the result back to our 4D array! Oversampling also has various approaches, a popular one being Synthetic Minority Over-sampling Technique (SMOTE):
+
+```
+from imblearn.over_sampling import SMOTE
+x_train, y_train = SMOTE(random_state=42).fit_resample(X_flattened, y_train)
+```
+
+This is exactly what would cause the issue with our dataset, given the relative similarity between the classes.
+
+Keep in mind that increasing the dataset by oversampling will increase the memory required to handle the data. Already, a dataset such as this one is likely consuming up to ~20GB of RAM if used in its fullest, so increasing the size would limit the number of systems that can run the code.
+
+An alternative to oversampling would be to undersample:
+
+```
+from imblearn.under_sampling import RandomUnderSampler
+x_train, y_train = RandomUnderSampler(random_state=42).fit_resample(X_flattened, y_train)
+```
+The RandomUnderSampler separates the x_train and y_train into classes, and undersamples the more numerous one, randomly. You don't have to either sort the data into classes or separate them into two sets! Once the fit_resample() is called, we can perform a count plot to check how many instances per class there are.
+
+![image](Images/breast-cancer-classification-with-keras-and-tensorflow-custom-cnns-transfer-learning-5.png)
+
+Finally, we'd want to reshape x_train back to the original shape:
+
+```
+x_train = x_train.reshape(len(x_train), 200, 200, 3)
+```
+
+****
+_Note: The RandomUnderSampler class, while undersampling, also sorts the inputs. Our x_train would have half of its samples consisting of consecutive 0s followed by another half of its samples consisting of 1. We'd want to shuffle x_train, y_train, x_test, y_test before using them any further._
+****
+
+```
+from sklearn.utils import shuffle
+
+x_train, y_train = shuffle(x_train, y_train)
+x_test, y_test = shuffle(x_test, y_test)
+```
+### Imbalance Implications and Hypotheses - Making Educated Guesses
+Since we've decided to not balance the classes - we do have to consider some things. For instance - accuracy is likely to be a bad metric for network performance, because 71% accuracy is a given considering the imbalance.
+
+****
+_We'll want to use metrics besides accuracy when we fit the model, since accuracy isn't going to be a good proxy for performance._
+****
+
+In cases such as these - recall is a great metric to keep in mind, since it's calculated by dividing true positives by the number of relevant examples (how correct the model is at figuring out true positives). Additionally precision is the ratio between true positives and all positives. The AUC (Area Under Curve) is a good measure of how well the model discerns between classes, so a high AUC score is a good indication as to how well a model could perform, but is far from sacrosanct.
+
+It'll be harder to steer the network in accurately representing IDC(+) instances in its internal knowledge representations, since there's a larger incentive in pushing out 0 predictions for most inputs. In other words - the recall-precision balance will be a tough one.
+
+You might retort that F1 is based on the the harmonic mean between recall and precision - and it is. It's a great metric to keep in mind here, and we will. Since Keras doesn't have a built-in F1 Score metric, we'll define our own F1 metric later on. For the baseline model - there's no need to, and we'll take a look at precision and recall individually, as their mean can be manipulated by each of them individually.
+
+Ideally - we'd find a loss function to align with F1, but there is no such loss function built-in. Binary Crossentropy is what's used when we're performing binary classification, typically.
+
+****
+_Binary Crossentropy has an issue with imbalanced datasets._
+****
+
+This makes our job here much harder, since the most widely used loss function for binary classification doesn't work very well for our dataset. Additionally, since we'll eventually want to maximize the F1 score (a tall order) - how do we maximize F1?
+
+****
+Which loss function maximizes F1?
+****
+
+Well, Binary Crossentropy does okay with F1, but not when there's high imbalance like there is in our dataset. Many are tempted to turn to the function calculating F1 and to use that instead as a loss function, but it's non-differentiable, meaning, you can't calculate gradients for it, and gradients are necessary for Gradient Descent to optimize it.
+
+****
+### F1 = (2*Prevision*Recall)/(Precision + Recall)
+****
+
+We can tweak the function to turn it into a differentiable calculation, making it a possible loss function for our model - and we will. In the Hyperparameter Tuning section, we'll define a custom F1 Metric and F1 Loss to see if that helps to any degree, keeping an open mind to the option that it doesn't help.
+
+Intuitively, it should, but it doesn't have to be the case. On datasets that have a hard-to-achieve F1 score, the tug-of-war between precision and recall might not settle favorably for us. It's probable that one will generally degrade the other, and that we won't be able to get both of them to a very high number.
+
+Considering the fact that the loss function we'll be using isn't fully aligned with the key metric we want to keep track of - it'll be genuinely difficult to train a model for this dataset. Additionally, F1 is likely to bounce up and down during training, since the loss function isn't optimizing for it - it's optimizing for binary accuracy which we've already concluded is a poor metric for an honest performance of the model, and isn't aligned with F1.
+
+Learning from imbalanced classes is an active area of research, and a big hurdle in the field of machine learing. While some solutions do exist - such as synthetically sampling, undersampling, etc., we've cut them off as viable solutions due to the nature of our specific dataset.
+
+****
+_Spoiler Alert: Neither defining F1 as a metric, nor a tweaked differentiable F1 loss helps here, so we won't be using it from the get-go._
+****
+
+One final thing we can employ is weighted/cost-sensitive learning. We can give more weight to one class, rather than another, during training, and while this weight can be consulted about with professionals from the domain - a good rule of thumb is to start with the inverse proportion of the natural proportion of classes in the dataset. In our case, we've got ~3.4 IDC(-) samples for every 1 IDC(+) sample.
+
+A bit of experimentation shows that this gave too much weight to the undersampled images - and an adjusted weight of 1.5 seems to work well. Let's quickly define a dictionary, class_weights that we can pass into the fit() method later on:
+
+````
+# Assigning a higher weight to the positive class (IDC(+) samples)
+class_weights = {0:1, 1:1.5}
+````
+
+Feel free to play with this number!
+****
+_Note: An alternative to cost-sensitive learning is to simply tweak the treshold for classification. Since we're doing binary classification - the default treshold for figuring out which class a prediction belongs to is 0.5. If the result of the sigmoid activation is above 0.5 - it belongs to class 1 and vice versa. The authors of the original paper turned the treshold down to 0.29, reflecting the undersampling of the classes._
+****
 ## 3. Huấn luyện mô hình - CNN từ đầu
 ## 4. Huấn luyện mô hình - EfficientNetB0
 ## 5. Huấn luyện mô hình - VGG16
